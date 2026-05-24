@@ -1,0 +1,292 @@
+================================================================
+  CLOUD STORAGE SECURITY & AUDITING SYSTEM
+  Complete Setup Guide — React JS + Spring Boot + PostgreSQL
+================================================================
+
+WHAT YOU NEED TO INSTALL (one-time setup)
+──────────────────────────────────────────
+1. Java JDK 17      → https://adoptium.net/temurin/releases
+2. Eclipse IDE      → https://www.eclipse.org/downloads
+                      (choose "Eclipse IDE for Enterprise Java Developers")
+3. PostgreSQL 14+   → https://www.postgresql.org/download
+4. Node.js (LTS)    → https://nodejs.org   ← needed only to run React
+   (Just install it, you don't need to learn Node.js at all)
+
+================================================================
+ STEP 1 — SET UP PostgreSQL DATABASE
+================================================================
+
+Option A (pgAdmin GUI — easy):
+  1. Open pgAdmin
+  2. Right-click "Databases" → Create → Database
+  3. Name: cloudsec_db → Save
+  4. (Optional) Open Query Tool → paste database_setup.sql → Run
+
+Option B (Command line):
+  psql -U postgres
+  CREATE DATABASE cloudsec_db;
+  \q
+
+  ✅ Done. Hibernate will auto-create all tables when app starts.
+
+================================================================
+ STEP 2 — SET YOUR DATABASE PASSWORD
+================================================================
+
+Open this file:
+  backend/src/main/resources/application.properties
+
+Change this line to YOUR PostgreSQL password:
+  spring.datasource.password=postgres    ← change this
+
+If your PostgreSQL is on a different port:
+  spring.datasource.url=jdbc:postgresql://localhost:5432/cloudsec_db
+
+================================================================
+ STEP 3 — IMPORT BACKEND INTO ECLIPSE
+================================================================
+
+  1. Open Eclipse
+  2. File → Import → Maven → Existing Maven Projects → Next
+  3. Root Directory → Browse → select the "backend" folder
+  4. Finish
+  5. Eclipse downloads all dependencies automatically
+     (watch the progress bar at bottom — takes 1-3 minutes)
+
+  If you see red errors on Lombok:
+  → Download lombok.jar from: https://projectlombok.org/download
+  → Double-click the .jar file → Install for Eclipse → Restart Eclipse
+  → Right-click project → Maven → Update Project → OK
+
+================================================================
+ STEP 4 — RUN THE SPRING BOOT BACKEND
+================================================================
+
+  In Eclipse:
+  1. Expand project → src/main/java → com.cloudsec
+  2. Right-click CloudSecApplication.java
+  3. Run As → Java Application
+
+  You will see in Console:
+  ╔══════════════════════════════════════════╗
+  ║  Cloud Storage Security & Auditing System ║
+  ║  Backend API: http://localhost:8080       ║
+  ║  Frontend:    http://localhost:3000       ║
+  ╚══════════════════════════════════════════╝
+
+  Also look for: "Hibernate: create table users..."
+  (Tables are created automatically)
+
+  ✅ Backend is running at: http://localhost:8080
+
+  Via command line (alternative):
+    cd backend
+    mvn spring-boot:run
+
+================================================================
+ STEP 5 — RUN THE REACT FRONTEND
+================================================================
+
+  Open a NEW terminal / command prompt window:
+
+  Windows:
+    cd C:\path\to\cloudsec3\frontend
+    npm install
+    npm start
+
+  Mac/Linux:
+    cd /path/to/cloudsec3/frontend
+    npm install
+    npm start
+
+  First time: "npm install" downloads packages (takes 1-2 min)
+  Then "npm start" opens browser automatically at:
+    http://localhost:3000
+
+  ✅ That's it! You don't need to know Node.js.
+     "npm install" = download libraries
+     "npm start"   = start the website
+
+================================================================
+ STEP 6 — USE THE APPLICATION
+================================================================
+
+  1. Go to http://localhost:3000/register
+
+  2. Create these test accounts:
+
+     ┌─────────────────────────────────────────────────────┐
+     │ Username │ Email              │ Password │ Role      │
+     ├─────────────────────────────────────────────────────┤
+     │ alice    │ alice@test.com     │ alice123 │ USER      │
+     │ bob      │ bob@test.com       │ bob123   │ USER      │
+     │ tpa1     │ tpa@test.com       │ tpa123   │ TPA       │
+     │ san1     │ san@test.com       │ san123   │ SANITIZER │
+     │ admin    │ admin@test.com     │ admin123 │ CLOUD_ADMIN│
+     └─────────────────────────────────────────────────────┘
+
+  3. LOGIN as alice → upload a .txt file
+  4. Go to Sanitizer → Preview → Sanitize
+  5. Go to TPA Audit → Request Audit for the file
+  6. LOGIN as tpa1 → TPA Audit → Verify the pending audit
+  7. Back as alice → Share → share sanitized file with bob
+  8. Go to PKG → see your identity key
+  9. LOGIN as bob → Share → Received — see the shared file
+
+================================================================
+ TEST FILE FOR SANITIZATION
+================================================================
+
+Create a file called "test.txt" with this content and upload it:
+
+------------------------------------------------------------
+Employee Report - Confidential
+Name: John Smith
+Email: john.smith@company.com
+Phone: 9876543210
+Aadhaar Number: 1234 5678 9012
+PAN Card: ABCDE1234F
+Credit Card: 4111 1111 1111 1111
+Password: MyPassword123
+Server IP: 192.168.1.100
+SSN: 123-45-6789
+------------------------------------------------------------
+
+After sanitizing, it becomes:
+------------------------------------------------------------
+Employee Report - Confidential
+Name: John Smith
+Email: [REDACTED-EMAIL]
+Phone: [REDACTED-PHONE]
+Aadhaar Number: [REDACTED-AADHAAR]
+PAN Card: [REDACTED-PAN]
+Credit Card: [REDACTED-CREDIT_CARD]
+[REDACTED-PASSWORD_FIELD]
+Server IP: [REDACTED-IP_ADDRESS]
+SSN: [REDACTED-SSN]
+------------------------------------------------------------
+
+================================================================
+ REST API ENDPOINTS (for Postman testing)
+================================================================
+
+BASE URL: http://localhost:8080
+
+AUTH (no token needed):
+  POST /api/auth/register    { "username","email","password","role" }
+  POST /api/auth/login       { "username","password" }
+
+FILES (add header: Authorization: Bearer <token>):
+  POST   /api/files/upload             multipart/form-data, key=file
+  GET    /api/files/my                 my files list
+  GET    /api/files/all                all files (admin)
+  GET    /api/files/download/{id}      download original
+  GET    /api/files/download-sanitized/{id}
+  DELETE /api/files/{id}
+
+SANITIZER:
+  POST /api/sanitizer/sanitize/{fileId}
+  GET  /api/sanitizer/preview/{fileId}
+  GET  /api/sanitizer/pending
+
+TPA:
+  POST /api/tpa/request/{fileId}
+  POST /api/tpa/verify/{auditId}
+  GET  /api/tpa/pending
+  GET  /api/tpa/my-requests
+  GET  /api/tpa/all
+
+PKG:
+  GET  /api/pkg/my-key
+  POST /api/pkg/regenerate-key
+  GET  /api/pkg/verify/{username}
+
+SHARE:
+  POST /api/share/send       { "fileId","sharedWithUsername","useSanitized" }
+  GET  /api/share/received
+  GET  /api/share/sent
+
+================================================================
+ FOLDER STRUCTURE
+================================================================
+
+cloudsec3/
+├── backend/                         ← Spring Boot project (import to Eclipse)
+│   ├── pom.xml                      ← Maven dependencies
+│   └── src/main/java/com/cloudsec/
+│       ├── CloudSecApplication.java ← MAIN ENTRY POINT (run this)
+│       ├── entity/                  ← User, CloudFile, AuditRequest, FileShare
+│       ├── repository/              ← JPA database access
+│       ├── service/                 ← PkgService, CloudFileService,
+│       │                               SanitizerService, TpaService, FileShareService
+│       ├── controller/              ← REST API endpoints
+│       ├── security/                ← JWT filter, UserDetailsService
+│       └── config/                  ← SecurityConfig (CORS, JWT setup)
+│
+├── frontend/                        ← React JS project
+│   ├── package.json                 ← npm dependencies
+│   └── src/
+│       ├── App.js                   ← Main app + routing + sidebar
+│       ├── App.css                  ← All styles
+│       ├── api.js                   ← All REST API calls (plain fetch)
+│       ├── index.js                 ← Entry point
+│       └── pages/
+│           ├── Login.js             ← Login page
+│           ├── Register.js          ← Register page
+│           ├── Dashboard.js         ← Home dashboard
+│           ├── MyFiles.js           ← File upload & management
+│           ├── SanitizerPage.js     ← PII redaction module
+│           ├── TpaPage.js           ← TPA audit module
+│           ├── PkgPage.js           ← Identity key management
+│           └── SharePage.js         ← Secure file sharing
+│
+├── database_setup.sql               ← PostgreSQL setup
+└── HOW_TO_RUN.txt                   ← This file
+
+================================================================
+ COMMON ERRORS & FIXES
+================================================================
+
+Error: "Failed to connect to database"
+  → Make sure PostgreSQL is running
+  → Windows: Services → postgresql → Start
+  → Check password in application.properties
+
+Error: "Port 8080 already in use"
+  → Change to: server.port=8081
+  → Also update frontend/package.json "proxy": "http://localhost:8081"
+
+Error: "npm: command not found"
+  → Install Node.js from https://nodejs.org → restart terminal
+
+Error: "Port 3000 already in use"
+  → npm start will ask "Would you like to run on another port?" → press Y
+
+Error: Lombok annotations not recognized in Eclipse
+  → Download lombok.jar → double-click → Install → restart Eclipse
+  → Right-click project → Maven → Update Project
+
+Error: CORS error in browser console
+  → Make sure backend is running on port 8080
+  → Check application.properties: app.cors.allowed-origins=http://localhost:3000
+
+================================================================
+ TECHNOLOGIES SUMMARY
+================================================================
+
+  Backend:   Java 17 + Spring Boot 3.2 + Spring Security + JWT
+  Frontend:  React JS 18 + React Router + plain fetch() API calls
+  Database:  PostgreSQL 14 + Spring Data JPA + Hibernate
+  Build:     Maven (backend) + npm (frontend)
+  IDE:       Eclipse for Java EE
+
+  Security Concepts:
+  • Identity-Based Encryption (IBE) simulation via SHA-256
+  • JWT stateless authentication (Bearer tokens)
+  • BCrypt password hashing
+  • Challenge-Response integrity audit protocol
+  • PII / Sensitive data redaction (Regex patterns)
+  • Role-Based Access Control (RBAC) — 5 roles
+  • SHA-256 file integrity hashing
+
+================================================================

@@ -1,0 +1,8 @@
+Employee Report - Confidential
+Name: John Smith
+Email: [REDACTED-EMAIL]
+Phone: [REDACTED-PHONE]
+Aadhaar: [REDACTED-AADHAAR]
+PAN: [REDACTED-PAN]
+[REDACTED-PASSWORD_FIELD]
+IP: [REDACTED-IP_ADDRESS]
